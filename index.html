@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>My Résumé</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <section>
+        <div id="console" style="background: black; color: white; padding: 10px; height: 300px; overflow-y: auto; font-family: monospace;">
+            <div id="console-content"></div>
+        </div>
+
+        <script>
+            (function() {
+                const consoleDiv = document.getElementById('console-content');
+                const consoleContainer = document.getElementById('console');
+                const prompt = 'root@localhost:~# ';
+                const commandHistory = [];
+                let historyIndex = -1;
+                let currentInput = null;
+                let currentPromptContainer = null;
+
+                const methods = ['log', 'warn', 'error', 'info', 'debug'];
+                methods.forEach(method => {
+                    const originalMethod = console[method];
+                    console[method] = function (...args) {
+                        const newMessage = document.createElement('p');
+                        newMessage.textContent = args.join(' ');
+                        newMessage.style.margin = '0';
+                        if (currentPromptContainer && consoleDiv.contains(currentPromptContainer)) {
+                            if (currentPromptContainer.nextSibling) {
+                                consoleDiv.insertBefore(newMessage, currentPromptContainer.nextSibling);
+                            } else {
+                                consoleDiv.appendChild(newMessage);
+                            }
+                        } else {
+                            consoleDiv.appendChild(newMessage);
+                        }
+                        consoleContainer.scrollTop = consoleContainer.scrollHeight;
+                        originalMethod.apply(console, args);
+                    };
+                });
+
+                function createNewPrompt(value = prompt) {
+                    if (currentInput) {
+                        currentInput.disabled = true;
+                    }
+
+                    const promptContainer = document.createElement('div');
+                    const promptSpan = document.createElement('span');
+                    promptSpan.textContent = prompt;
+                    promptSpan.style.display = 'inline-block';
+                    promptSpan.style.userSelect = 'none';
+
+                    const input = document.createElement('input');
+                    input.type = 'text';
+                    input.style.background = 'black';
+                    input.style.color = 'white';
+                    input.style.border = 'none';
+                    input.style.outline = 'none';
+                    input.style.fontFamily = 'monospace';
+                    input.style.padding = '0';
+                    input.style.margin = '0';
+                    input.style.width = `calc(100% - ${prompt.length * 8}px)`;
+                    input.value = ' ';
+
+                    promptContainer.appendChild(promptSpan);
+                    promptContainer.appendChild(input);
+                    consoleDiv.appendChild(promptContainer);
+
+                    input.focus();
+                    currentInput = input;
+                    currentPromptContainer = promptContainer;
+
+                    input.addEventListener('keydown', handleInput);
+                    input.addEventListener('click', maintainCursorPosition);
+
+                    return input;
+                }
+
+                function handleInput(event) {
+                    if (event.key === 'Enter') {
+                        const input = event.target.value;
+                        if (input.trim()) {
+                            commandHistory.push(input);
+                            historyIndex = commandHistory.length;
+                            executeCommand(input);
+                        }
+                        createNewPrompt();
+                        event.preventDefault();
+                    } else if (event.key === 'ArrowUp') {
+                        if (historyIndex > 0) {
+                            historyIndex--;
+                            event.target.value = commandHistory[historyIndex] || '';
+                        }
+                        event.preventDefault();
+                    } else if (event.key === 'ArrowDown') {
+                        if (historyIndex < commandHistory.length - 1) {
+                            historyIndex++;
+                            event.target.value = commandHistory[historyIndex];
+                        } else {
+                            historyIndex = commandHistory.length;
+                            event.target.value = '';
+                        }
+                        event.preventDefault();
+                    }
+                }
+
+                function maintainCursorPosition() {
+                    currentInput.focus();
+                }
+
+                function executeCommand(command) {
+                    switch(command.trim().toLowerCase()) {
+                        case 'clear':
+                            consoleDiv.innerHTML = '';
+                            break;
+                        case 'help':
+                            console.log('Available commands: clear, help, whoami, date');
+                            break;
+                        case 'whoami':
+                            console.log('John Doe - Web Developer');
+                            break;
+                        case 'date':
+                            console.log(new Date().toString());
+                            break;
+                        default:
+                            console.log(`bash: ${command}: command not found`);
+                    }
+                }
+
+                createNewPrompt();
+            })();
+        </script>
+    </section>
+</body>
+</html>
